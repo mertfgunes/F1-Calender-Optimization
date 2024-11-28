@@ -8,6 +8,11 @@ import pyswarms as ps
 from simanneal import Annealer
 from deap import base, creator, tools
 
+#Progress checking:
+#14:40 28/11/2024
+#2 pass, Row to Float, ReadCSV
+#7 fail.
+
 # the unit tests to check that the simulation has been implemented correctly
 class UnitTests (unittest.TestCase):
     # this will read in the track locations file and will pick out 5 fields to see if the file has been read correctly
