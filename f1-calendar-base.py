@@ -166,7 +166,17 @@ def childGeneticCodeFix(child):
 # function that will take in the set of rows and will convert the given row index into floating point values
 # this assumes the header in the CSV file is still present so it will skip the first column
 def convertRowToFloat(rows, row_index):
-    pass
+    """
+    Converts all elements in a specific row (row_index) of the rows list
+    to floating-point numbers where possible, leaving non-numeric strings unchanged.
+    """
+    for col_index in range(1, len(rows[row_index])):  # Skip the first column (headers)
+        try:
+            rows[row_index][col_index] = float(rows[row_index][col_index])
+        except ValueError:
+            # Leave non-convertible strings as they are
+            pass
+
 
 # function that will generate a shuffled itinerary. However, this will make sure that the bahrain, abu dhabi, and monaco
 # will retain their fixed weeks in the calendar
