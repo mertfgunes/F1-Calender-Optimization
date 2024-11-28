@@ -172,14 +172,12 @@ def childGeneticCodeFix(child):
 # this assumes the header in the CSV file is still present so it will skip the first column
 def convertRowToFloat(rows, row_index):
     """
-    Converts all elements in a specific row (row_index) of the rows list
-    to floating-point numbers where possible, leaving non-numeric strings unchanged.
+    converts all elements in a specific row of the rows list to floating-point numbers where possible
     """
-    for col_index in range(1, len(rows[row_index])):  # Skip the first column (headers)
+    for col_index in range(1, len(rows[row_index])):  # avoid header
         try:
             rows[row_index][col_index] = float(rows[row_index][col_index])
         except ValueError:
-            # Leave non-convertible strings as they are
             pass
 
 
@@ -227,7 +225,14 @@ def readCSVFile(file):
 
 # function that will read in the race weekends file and will perform all necessary conversions on it
 def readRaceWeekends():
-    pass
+
+    # read
+    rows = readCSVFile('race-weekends.csv')
+
+    # convert the second row into integer, skip the header
+    weekends = [int(row[1]) for row in rows[1:]]
+
+    return weekends
 
 # function that will read the track locations file and will perform all necessary conversions on it.
 # this should also strip out the first column on the left which is the header information for all the rows
