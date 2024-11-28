@@ -9,9 +9,9 @@ from simanneal import Annealer
 from deap import base, creator, tools
 
 #Progress checking:
-#14:57 28/11/2024
-#3 pass, Row to Float, ReadCSV, ReadRaceWeekends
-#6 fail.
+#15:15 28/11/2024
+#4 pass, Row to Float, ReadCSV, ReadRaceWeekends, readTrackLocations
+#5 fail.
 
 # the unit tests to check that the simulation has been implemented correctly
 class UnitTests (unittest.TestCase):
