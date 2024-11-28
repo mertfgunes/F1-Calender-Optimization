@@ -237,7 +237,19 @@ def readRaceWeekends():
 # function that will read the track locations file and will perform all necessary conversions on it.
 # this should also strip out the first column on the left which is the header information for all the rows
 def readTrackLocations():
-    pass
+    # read
+    rows = readCSVFile('track-locations.csv')
+
+    # convert row 2 and row 3 to floats
+    convertRowToFloat(rows, 2)  # latitude
+    convertRowToFloat(rows, 3)  # longitude
+
+    # convert all temperature rows to floats
+    for i in range(4, len(rows)):
+        convertRowToFloat(rows, i)
+
+    # return first column without the header.
+    return [row[1:] for row in rows]
 
 # function that performs a roulette wheel randomisation on the two given values and returns the chosen on
 def rouletteWheel(a, b):
