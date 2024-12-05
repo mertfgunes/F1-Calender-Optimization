@@ -149,7 +149,17 @@ def calculateSeasonDistance(tracks, weekends, home):
 
 # function that will check to see if there is anywhere in our weekends where four races appear in a row. True indicates that we have four in a row
 def checkFourRaceInRow(weekends):
-    pass
+    # Sort the weekends to ensure they're in ascending order
+    weekends = sorted(weekends)
+
+    # Check for four consecutive weekends
+    for i in range(len(weekends) - 3):
+        if weekends[i] + 1 == weekends[i + 1] and \
+                weekends[i] + 2 == weekends[i + 2] and \
+                weekends[i] + 3 == weekends[i + 3]:
+            return True
+
+    return False
 
 # function that will check to see if the temperature constraint for all races is satisfied. The temperature
 # constraint is that a minimum temperature of min degrees for the month is required for a race to run
