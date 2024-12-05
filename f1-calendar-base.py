@@ -189,7 +189,26 @@ def generateShuffledItinerary(weekends):
 # function that will use the haversine formula to calculate the distance in Km given two latitude/longitude pairs
 # it will take in an index to two rows, and extract the latitude and longitude before the calculation.
 def haversine(rows, location1, location2):
-    pass
+    # Extract latitude and longitude in degrees
+    lat1 = rows[2][location1]
+    lon1 = rows[3][location1]
+    lat2 = rows[2][location2]
+    lon2 = rows[3][location2]
+
+    # Convert degrees to radians
+    lat1 = math.radians(lat1)
+    lon1 = math.radians(lon1)
+    lat2 = math.radians(lat2)
+    lon2 = math.radians(lon2)
+
+    # Apply the haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    c = 2 * math.asin(math.sqrt(a))
+    distance = 6371 * c  # Earth's radius in kilometers
+
+    return distance
 
 # function that will give us the index of the lowest temp below min. will return -1 if none found
 def indexHighestTemp(tracks, weekends, max):
