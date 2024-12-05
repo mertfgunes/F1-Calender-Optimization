@@ -160,7 +160,26 @@ def checkTemperatureConstraint(tracks, weekends, min, max):
 # the way this is defined is that we have a gap of three weekends between successive races. this will be weeks 31, 32, and 33, they are not
 # permitted to have a race during these weekends
 def checkSummerShutdown(weekends):
-    pass
+
+
+    #checks if there are any three repeating weekends with no race until summer
+
+
+    # range define
+    summer_weeks = set(range(27, 36))
+
+    # checking all the race weekends
+    race_weekends = set(weekends)
+
+    # if the non race weekend in the summer
+    non_race_weekends = sorted([week for week in summer_weeks if week not in race_weekends])
+
+    # is there 3 repeating race?
+    for i in range(len(non_race_weekends) - 2):
+        if non_race_weekends[i] + 1 == non_race_weekends[i + 1] and non_race_weekends[i] + 2 == non_race_weekends[i + 2]:
+            return True
+
+    return False
 
 # will go through the genetic code of this child and will make sure that all the required weekends are in it.
 # it's highly likely that with crossover that there will be weekends missing and others duplicated. we will
@@ -189,24 +208,24 @@ def generateShuffledItinerary(weekends):
 # function that will use the haversine formula to calculate the distance in Km given two latitude/longitude pairs
 # it will take in an index to two rows, and extract the latitude and longitude before the calculation.
 def haversine(rows, location1, location2):
-    # Extract latitude and longitude in degrees
+    # extract both in degrees
     lat1 = rows[2][location1]
     lon1 = rows[3][location1]
     lat2 = rows[2][location2]
     lon2 = rows[3][location2]
 
-    # Convert degrees to radians
+    # degrees to radians
     lat1 = math.radians(lat1)
     lon1 = math.radians(lon1)
     lat2 = math.radians(lat2)
     lon2 = math.radians(lon2)
 
-    # Apply the haversine formula
+    # the haversine formula
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
     c = 2 * math.asin(math.sqrt(a))
-    distance = 6371 * c  # Earth's radius in kilometers
+    distance = 6371 * c  # radius of earth
 
     return distance
 
