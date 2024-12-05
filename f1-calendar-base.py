@@ -10,8 +10,8 @@ from deap import base, creator, tools
 
 #Progress checking:
 #15:15 28/11/2024
-#4 pass, Row to Float, ReadCSV, ReadRaceWeekends, readTrackLocations
-#5 fail.
+#5 pass, Row to Float, ReadCSV, ReadRaceWeekends, readTrackLocations, Haversine,
+#4 fail.
 
 # the unit tests to check that the simulation has been implemented correctly
 class UnitTests (unittest.TestCase):
