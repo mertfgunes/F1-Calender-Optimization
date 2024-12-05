@@ -145,14 +145,37 @@ class UnitTests (unittest.TestCase):
 # - the preseason test will always take place in Bahrain
 # - for the summer shutdown and off season the team will return home
 def calculateSeasonDistance(tracks, weekends, home):
-    pass
+    total_distance = 0
+    current_location = home  # first the home track
+
+    for i in range(1, 53):  # iteration through entire year
+        if i in weekends:
+            # race weekend -> find the index of the race track
+            race_index = weekends.index(i)
+
+            # calculation of distance from current location to next
+            total_distance += haversine(tracks, current_location, race_index)
+
+            # update the location
+            current_location = race_index
+
+            # check for next week, whether its a race or not.
+            if i == weekends[-1] or (i + 1 not in weekends):
+                total_distance += haversine(tracks, current_location, home)
+                current_location = home
+
+    # end of the season = home
+    if current_location != home:
+        total_distance += haversine(tracks, current_location, home)
+
+    return total_distance
 
 # function that will check to see if there is anywhere in our weekends where four races appear in a row. True indicates that we have four in a row
 def checkFourRaceInRow(weekends):
-    # Sort the weekends to ensure they're in ascending order
+    # sor the weekends
     weekends = sorted(weekends)
 
-    # Check for four consecutive weekends
+    # checker
     for i in range(len(weekends) - 3):
         if weekends[i] + 1 == weekends[i + 1] and \
                 weekends[i] + 2 == weekends[i + 2] and \
@@ -164,7 +187,22 @@ def checkFourRaceInRow(weekends):
 # function that will check to see if the temperature constraint for all races is satisfied. The temperature
 # constraint is that a minimum temperature of min degrees for the month is required for a race to run
 def checkTemperatureConstraint(tracks, weekends, min, max):
-    pass
+    for race_index, race_week in enumerate(weekends):
+        # Determine the week index for the race
+        week_index = race_week - 1  # Week numbers start at 1, but arrays are 0-based
+
+        # Extract the expected temperature for this track during this week
+        track_temperature = tracks[4 + week_index][race_index + 1]
+
+        # Debugging print to verify the temperature
+        print(f"Checking track index {race_index}, week {race_week}: Temperature = {track_temperature}")
+
+        # Check if the temperature is within the acceptable range
+        if track_temperature < min or track_temperature > max:
+            print(f"Temperature {track_temperature} for week {race_week} is out of range ({min}, {max})")
+            return False  # Return False if any temperature is out of range
+
+    return True  # All temperatures are within range
 
 # function that will check to see if there is a four week gap anywhere in july and august. we will need this for the summer shutdown.
 # the way this is defined is that we have a gap of three weekends between successive races. this will be weeks 31, 32, and 33, they are not
