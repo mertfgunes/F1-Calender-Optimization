@@ -112,11 +112,11 @@ class UnitTests (unittest.TestCase):
         # load in the tracks, race weekends, and the sundays
         tracks = readTrackLocations()
         weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
-        weekends2 = [9, 10, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 35, 37, 38, 42, 43, 44, 47, 48, 49]
+        weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 31, 35, 37, 38, 42, 43, 44, 40, 48, 49]
 
-        # the test with the default calendar should be false because of low temperature
+        # the test with the default calender should be false because of zaandvort
         self.assertEqual(checkTemperatureConstraint(tracks, weekends1, 20, 35), False)
-        self.assertEqual(checkTemperatureConstraint(tracks, weekends2, 20, 35), False)
+        self.assertEqual(checkTemperatureConstraint(tracks, weekends2, 20, 35), True)
 
     # will test that we can detect four race weekends in a row.
     def testFourRaceInRow(self):
@@ -187,21 +187,14 @@ def checkFourRaceInRow(weekends):
 # function that will check to see if the temperature constraint for all races is satisfied. The temperature
 # constraint is that a minimum temperature of min degrees for the month is required for a race to run
 def checkTemperatureConstraint(tracks, weekends, min, max):
-    for race_index, race_week in enumerate(weekends):
-        # Calculate the row index for temperature (starting from row 4)
-        week_index = race_week - 1  # Adjust for 0-based indexing
+    i= 0
 
-        # Extract the temperature for this track during this week
-        # Use race_index + 1 to skip the header column
-        track_temperature = tracks[4 + week_index][race_index + 1]
-
-        print(f"Week {race_week}, Race Index {race_index}: Temperature = {track_temperature}")
-
-        # Check if the temperature is within the acceptable range
-        if track_temperature < min or track_temperature > max:
-            return False  # Return False if any temperature is out of range
-
-    return True  # All temperatures are within range
+    for j in range (23):
+        if tracks[weekends[i] + 4][j] < min or tracks[weekends[i] + 4][j] > max:
+            return False
+        else:
+            i += 1
+    return True
 # function that will check to see if there is a four week gap anywhere in july and august. we will need this for the summer shutdown.
 # the way this is defined is that we have a gap of three weekends between successive races. this will be weeks 31, 32, and 33, they are not
 # permitted to have a race during these weekends
