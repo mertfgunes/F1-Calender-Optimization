@@ -9,9 +9,8 @@ from simanneal import Annealer
 from deap import base, creator, tools
 
 #Progress checking:
-#15:58 5/12/2024
-#9 pass, All
-#0 fail.
+#14:06 12/12/2024
+#tests are finished
 
 # the unit tests to check that the simulation has been implemented correctly
 class UnitTests (unittest.TestCase):
