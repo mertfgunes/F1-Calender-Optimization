@@ -11,6 +11,7 @@ from deap import base, creator, tools
 #Progress checking:
 #14:06 12/12/2024
 #tests are finished
+#133742.2415190981 is the best result
 
 # the unit tests to check that the simulation has been implemented correctly
 # class UnitTests (unittest.TestCase):
