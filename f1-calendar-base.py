@@ -351,31 +351,44 @@ class CalendarAnnealer(Annealer):
 
     def move(self):
         """
-        Perform a random move: Swap two races, excluding fixed weekends (Bahrain, Monaco, Abu Dhabi).
+        Perform a prioritized move to resolve constraint violations.
         """
-        idx1, idx2 = random.sample([i for i in range(len(self.state)) if i not in [8, 20, 48]], 2)
-        self.state[idx1], self.state[idx2] = self.state[idx2], self.state[idx1]
+        # Identify indices of races violating constraints
+        invalid_temp_indices = [
+            i for i, weekend in enumerate(self.state)
+            if self.tracks[weekend][4] < 15 or self.tracks[weekend][4] > 35
+        ]
+
+        if invalid_temp_indices:
+            # Swap one violating race with a valid one
+            idx1 = random.choice(invalid_temp_indices)
+            idx2 = random.choice([i for i in range(len(self.state)) if i not in [8, 20, 48] and i != idx1])
+            self.state[idx1], self.state[idx2] = self.state[idx2], self.state[idx1]
+        else:
+            # Fallback: random swap
+            idx1, idx2 = random.sample([i for i in range(len(self.state)) if i not in [8, 20, 48]], 2)
+            self.state[idx1], self.state[idx2] = self.state[idx2], self.state[idx1]
 
     def energy(self):
-        """
-        Calculate the total distance with penalties for constraint violations.
-        """
         weekends = self.state
         total_distance = calculateSeasonDistance(self.tracks, weekends, self.home)
 
         # Penalty for temperature constraints
-        if not checkTemperatureConstraint(self.tracks, weekends, 15, 35):
-            total_distance += 100000
+        temp_penalty = 0
+        for weekend in weekends:
+            temp = self.tracks[weekend][4]
+            if temp < 15:
+                temp_penalty += (15 - temp) ** 2  # Squared penalty for being too cold
+            elif temp > 35:
+                temp_penalty += (temp - 35) ** 2  # Squared penalty for being too hot
 
         # Penalty for summer shutdown violation
-        if not checkSummerShutdown(weekends):
-            total_distance += 100000
+        shutdown_penalty = 100000 if not checkSummerShutdown(weekends) else 0
 
         # Penalty for four consecutive races
-        if checkFourRaceInRow(weekends):
-            total_distance += 100000
+        four_races_penalty = 100000 if checkFourRaceInRow(weekends) else 0
 
-        return total_distance
+        return total_distance + temp_penalty + shutdown_penalty + four_races_penalty
 
     def generateShuffledItinerary(weekends):
         """
@@ -400,15 +413,48 @@ class CalendarAnnealer(Annealer):
 
     def printItinerary(tracks, weekends, home):
         """
-        Prints the itinerary based on the provided tracks and weekends.
+        Prints the itinerary for the season in a readable format.
         """
-        print(f"--- Preseason Test at Home Track ({home}) ---\n")
+        print(f"--- Preseason Test at Home Track ({tracks[0][home]}) ---\n")
+        total_distance = 0
 
-        for i, weekend in enumerate(weekends):
-            location = tracks[0][i]  # Assuming track names are in the first row
-            print(f"Weekend {weekend}: Race at {location}")
+        for i, weekend in enumerate(weekends, start=1):
+            track_name = tracks[0][weekend]  # Assuming track names are in the first row
+            expected_temp = tracks[4][weekend]  # Assuming temperature row is index 4
 
-        print("--- Itinerary Complete ---")
+            print(f"Weekend {i}: {track_name} (Week {weekend})")
+            print(f"   - Expected Temperature: {expected_temp:.1f}°C")
+
+            if i == 1:
+                print(f"   - Travel from Home to {track_name}")
+                distance = haversine(tracks, home, weekend)
+            elif i == len(weekends):
+                print(f"   - Travel to {track_name} and return to Home")
+                distance = haversine(tracks, weekends[i - 2], weekend) + haversine(tracks, weekend, home)
+            else:
+                print(f"   - Travel from Previous Race to {track_name}")
+                distance = haversine(tracks, weekends[i - 2], weekend)
+
+            total_distance += distance
+            print(f"   - Distance Traveled: {distance:.2f} km\n")
+
+        print(f"--- Total Distance for the Season: {total_distance:.2f} km ---\n")
+
+    def validateItinerary(tracks, weekends):
+        """
+        Validates the generated itinerary and prints results.
+        """
+        temp_valid = checkTemperatureConstraint(tracks, weekends, 15, 35)
+        four_race_valid = not checkFourRaceInRow(weekends)
+        summer_valid = checkSummerShutdown(weekends)
+
+        print("--- Itinerary Validation ---")
+        print(f" - Temperature Constraint: {'Passed' if temp_valid else 'Failed'}")
+        print(f" - Consecutive Races Constraint: {'Passed' if four_race_valid else 'Failed'}")
+        print(f" - Summer Shutdown Constraint: {'Passed' if summer_valid else 'Failed'}")
+        print(f"--- Validation Complete ---\n")
+
+
 def SAcases():
     """
     Runs the Simulated Annealing case and prints results for both Silverstone and Monza.
