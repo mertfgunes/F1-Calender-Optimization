@@ -242,7 +242,34 @@ def convertRowToFloat(rows, row_index):
 # function that will generate a shuffled itinerary. However, this will make sure that the bahrain, abu dhabi, and monaco
 # will retain their fixed weeks in the calendar
 def generateShuffledItinerary(weekends):
-    pass
+    """
+    Shuffle the weekends while keeping fixed races (like Bahrain, Monaco, Abu Dhabi) at specific positions.
+    """
+    try:
+        fixed_indices = [0, len(weekends)//2, len(weekends) - 1]  # Adjust to valid indices
+        fixed_values = [weekends[i] for i in fixed_indices]
+
+        # Extract non-fixed elements
+        non_fixed_indices = [i for i in range(len(weekends)) if i not in fixed_indices]
+        non_fixed_values = [weekends[i] for i in non_fixed_indices]
+
+        # Shuffle non-fixed values
+        random.shuffle(non_fixed_values)
+
+        # Merge back fixed and shuffled values
+        shuffled_weekends = weekends[:]
+        for idx, value in zip(non_fixed_indices, non_fixed_values):
+            shuffled_weekends[idx] = value
+
+        # Validate the output
+        if len(shuffled_weekends) != len(weekends):
+            raise ValueError("Shuffled itinerary length mismatch.")
+        return shuffled_weekends
+
+    except Exception as e:
+        print(f"Error in generateShuffledItinerary: {e}")
+        return None
+
 
 # function that will use the haversine formula to calculate the distance in Km given two latitude/longitude pairs
 # it will take in an index to two rows, and extract the latitude and longitude before the calculation.
@@ -484,7 +511,106 @@ def SAcases():
 
 # function that will run the genetic algorithms cases for all four situations
 def GAcases():
-    pass
+    """
+    Runs the Genetic Algorithm to optimize the calendar.
+    """
+    # Read tracks and weekends
+    tracks = readTrackLocations()
+    weekends = readRaceWeekends()
+
+    if not weekends:
+        raise ValueError("Race weekends data is missing or invalid.")
+
+    # Define the fitness function
+    def fitness(individual):
+        try:
+            total_distance = calculateSeasonDistance(tracks, individual, 11)
+            temp_penalty = 100000 if not checkTemperatureConstraint(tracks, individual, 15, 35) else 0
+            shutdown_penalty = 100000 if not checkSummerShutdown(individual) else 0
+            four_races_penalty = 100000 if checkFourRaceInRow(individual) else 0
+            return total_distance + temp_penalty + shutdown_penalty + four_races_penalty,
+        except Exception as e:
+            print(f"Error evaluating fitness: {e}")
+            return float('inf'),  # Assign a high penalty for invalid individuals
+
+    # Initialize population
+    def initialize_population(size, weekends):
+        population = []
+        for _ in range(size):
+            individual = generateShuffledItinerary(weekends)
+            if individual:
+                population.append(individual)
+        return population
+
+    # Repair invalid individuals
+    def childGeneticCodeFix(individual):
+        missing = set(weekends) - set(individual)
+        duplicates = [x for x in individual if individual.count(x) > 1]
+        for i in range(len(individual)):
+            if duplicates and individual[i] in duplicates:
+                individual[i] = missing.pop()
+                duplicates.remove(individual[i])
+        return individual
+
+    # Evolve population
+    def evolve_population(population, mutation_rate=0.1):
+        parents = tools.selTournament(population, len(population), tournsize=3)
+        offspring = []
+        for child1, child2 in zip(parents[::2], parents[1::2]):
+            if random.random() < 0.7:  # Crossover probability
+                tools.cxTwoPoint(child1, child2)
+            tools.mutShuffleIndexes(child1, indpb=mutation_rate)
+            tools.mutShuffleIndexes(child2, indpb=mutation_rate)
+            offspring.extend((child1, child2))
+        return [childGeneticCodeFix(child) for child in offspring]
+
+    # Initialize DEAP toolbox
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+    toolbox = base.Toolbox()
+    toolbox.register("individual", tools.initIterate, creator.Individual, lambda: generateShuffledItinerary(weekends))
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+    toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mutate", tools.mutShuffleIndexes, indpb=0.1)
+    toolbox.register("select", tools.selTournament, tournsize=3)
+    toolbox.register("evaluate", fitness)
+
+    # Initialize population
+    population_size = 100
+    generations = 50
+    population = toolbox.population(n=population_size)
+
+    # Run the GA
+    for generation in range(generations):
+        fitnesses = list(map(toolbox.evaluate, population))
+        for ind, fit in zip(population, fitnesses):
+            ind.fitness.values = fit
+
+        print(f"Generation {generation}: Best Score = {min(fitnesses)}")
+        offspring = toolbox.select(population, len(population))
+        offspring = list(map(toolbox.clone, offspring))
+
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            if random.random() < 0.7:
+                toolbox.mate(child1, child2)
+                del child1.fitness.values
+                del child2.fitness.values
+
+        for mutant in offspring:
+            if random.random() < 0.2:
+                toolbox.mutate(mutant)
+                del mutant.fitness.values
+
+        population[:] = offspring
+
+    # Final evaluation
+    best_individual = tools.selBest(population, 1)[0]
+    print("Best Schedule Found:", best_individual)
+    print("Best Distance + Penalties:", fitness(best_individual)[0])
+
+    # Print itinerary for the best solution
+    printItinerary(tracks, best_individual, 11)
+
 
 # function that will run particle swarm optimisation in an attempt to find a solution
 def PSOcases():
@@ -505,7 +631,7 @@ if __name__ == '__main__':
     SAcases()
 
     # run the cases for genetic algorithms
-    #GAcases()
+    GAcases()
 
     # run the cases for particle swarm optimisation
     #PSOcases()
