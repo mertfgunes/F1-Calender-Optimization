@@ -682,7 +682,7 @@ def PSOcases():
 if __name__ == '__main__':
     # uncomment this run all the unit tests. when you have satisfied all the unit tests you will have a working simulation
     # you can then comment this out and move onto your SA and GA solutions
-    # unittest.main()
+    unittest.main()
 
     # just to check that the itinerary printing mechanism works. we will assume that silverstone is the home track for this
     weekends = readRaceWeekends()
