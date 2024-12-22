@@ -5,138 +5,134 @@ import random
 import copy
 import numpy as np
 import pyswarms as ps
+from rich.progress import track
 from simanneal import Annealer
 from deap import base, creator, tools
 
-#Progress checking:
-#14:06 12/12/2024
-#tests are finished
-#133742.2415190981 is the best result
 
-# the unit tests to check that the simulation has been implemented correctly
-# class UnitTests (unittest.TestCase):
-#     # this will read in the track locations file and will pick out 5 fields to see if the file has been read correctly
-#     def testReadCSV(self):
-#         # read in the locations file
-#         rows = readCSVFile('track-locations.csv')
-#
-#         # test that the corners and a middle value are read in correctly
-#         self.assertEqual('GP', rows[0][0])
-#         self.assertEqual('Abu Dhabi', rows[0][24])
-#         self.assertEqual('temp week 52', rows[55][0])
-#         self.assertEqual('24.4', rows[55][24])
-#         self.assertEqual('14.5', rows[11][8])
-#
-#     # this will test to see if the row conversion works. here we will convert the latitude rwo and will test 5 values
-#     # as we are dealing with floating point we will use almost equals rather than a direct equality
-#     def testRowToFloat(self):
-#         # read in the locations file and convert the latitude column to floats
-#         rows = readCSVFile('track-locations.csv')
-#         convertRowToFloat(rows, 2)
-#
-#         # check that 5 of the values have converted correctly
-#         self.assertAlmostEqual(26.0325, rows[2][1], delta=0.0001)
-#         self.assertAlmostEqual(24.4672, rows[2][24], delta=0.0001)
-#         self.assertAlmostEqual(40.3725, rows[2][17], delta=0.0001)
-#         self.assertAlmostEqual(30.1327, rows[2][19], delta=0.0001)
-#         self.assertAlmostEqual(25.49, rows[2][23], delta=0.0001)
-#
-#         # check that the conversion of a temperature row to floating point is also correct
-#         convertRowToFloat(rows, 5)
-#
-#         # check that 5 of the values have converted correctly
-#         self.assertAlmostEqual(20.5, rows[5][1], delta=0.0001)
-#         self.assertAlmostEqual(24.5, rows[5][24], delta=0.0001)
-#         self.assertAlmostEqual(7.25, rows[5][17], delta=0.0001)
-#         self.assertAlmostEqual(16.75, rows[5][19], delta=0.0001)
-#         self.assertAlmostEqual(22.5, rows[5][23], delta=0.0001)
-#
-#     # this will test to see if the file conversion overall is successful for the track locations
-#     # it will read in the file and will test a string, float, and int from 2 rows to verify it worked correctly
-#     def testReadTrackLocations(self):
-#         # read in the locations file
-#         rows = readTrackLocations()
-#
-#         # check the name, latitude, and final temp of the first race
-#         self.assertEqual(rows[0][0], 'Bahrain')
-#         self.assertAlmostEqual(rows[2][0], 26.0325, delta=0.0001)
-#         self.assertAlmostEqual(rows[55][0], 20.6, delta=0.0001)
-#
-#         # check the name, longitude, and initial temp of the last race
-#         self.assertEqual(rows[0][23], 'Abu Dhabi')
-#         self.assertAlmostEqual(rows[2][23], 24.4672, delta=0.0001)
-#         self.assertAlmostEqual(rows[4][23], 24, delta=0.0001)
-#
-#     # tests to see if the race weekends file is read in correctly
-#     def testReadRaceWeekends(self):
-#         # read in the race weekends file
-#         weekends = readRaceWeekends()
-#
-#         # check that bahrain is weekend 9 and abu dhabi is weekend 49
-#         self.assertEqual(weekends[0], 9)
-#         self.assertEqual(weekends[23], 49)
-#
-#         # check that hungaroring is weekend 29
-#         self.assertEqual(weekends[12], 29)
-#
-#     # this will test to see if the haversine function will work correctly we will test 4 sets of locations
-#     def testHaversine(self):
-#         # read in the locations file with conversion
-#         rows = readTrackLocations()
-#
-#         # check the distance of Bahrain against itself this should be zero
-#         self.assertAlmostEqual(haversine(rows, 0, 0), 0.0, delta=0.01)
-#
-#         # check the distance of Bahrain against Silverstone this should be 5158.08 km
-#         self.assertAlmostEqual(haversine(rows, 0, 11), 5158.08, delta=0.01)
-#
-#         # check the distance of silverstone against monza this should be 1039.49 Km
-#         self.assertAlmostEqual(haversine(rows, 11, 15), 1039.49, delta=0.01)
-#
-#         # check the distance of monza to the red bull ring this should be 455.69 Km
-#         self.assertAlmostEqual(haversine(rows, 10, 15), 455.69, delta=0.01)
-#
-#     # will test to see if the season distance calculation is correct using the 2023 calendar
-#     def testDistanceCalculation(self):
-#         # read in the locations & race weekends, generate the weekends, and calculate the season distance
-#         tracks = readTrackLocations()
-#         weekends = readRaceWeekends()
-#
-#         # calculate the season distance using silverstone as the home track as this will be the case for 8 of the teams we will use monza
-#         # for the other two teams.
-#         self.assertAlmostEqual(calculateSeasonDistance(tracks, weekends, 11), 193645.3219, delta=0.0001)
-#         self.assertAlmostEqual(calculateSeasonDistance(tracks, weekends, 15), 191408.7483, delta=0.0001)
-#
-#     # will test that the temperature constraint is working this should fail as azerbijan should fail the test
-#     def testTempConstraint(self):
-#         # load in the tracks, race weekends, and the sundays
-#         tracks = readTrackLocations()
-#         weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
-#         weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 31, 35, 37, 38, 42, 43, 44, 40, 48, 49]
-#
-#         # the test with the default calender should be false because of zaandvort
-#         self.assertEqual(checkTemperatureConstraint(tracks, weekends1, 20, 35), False)
-#         self.assertEqual(checkTemperatureConstraint(tracks, weekends2, 20, 35), True)
-#
-#     # will test that we can detect four race weekends in a row.
-#     def testFourRaceInRow(self):
-#         # weekend patterns the first does not have four in a row the second does
-#         weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
-#         weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 35, 36, 37, 38, 42, 43, 44, 47, 48, 49]
-#
-#         # the first should pass and the second should fail
-#         self.assertEqual(checkFourRaceInRow(weekends1), False)
-#         self.assertEqual(checkFourRaceInRow(weekends2), True)
-#
-#     # will test that we can detect a period for a summer shutdown in the prescribed weeks
-#     def testSummerShutdown(self):
-#         # weekend patterns the first has a summer shutdown the second doesn't
-#         weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
-#         weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 33, 35, 37, 38, 42, 43, 44, 47, 48, 49]
-#
-#         # the first should pass and the second should fail
-#         self.assertEqual(checkSummerShutdown(weekends1), True)
-#         self.assertEqual(checkSummerShutdown(weekends2), False)
+class UnitTests (unittest.TestCase):
+    # this will read in the track locations file and will pick out 5 fields to see if the file has been read correctly
+    def testReadCSV(self):
+        # read in the locations file
+        rows = readCSVFile('track-locations.csv')
+
+        # test that the corners and a middle value are read in correctly
+        self.assertEqual('GP', rows[0][0])
+        self.assertEqual('Abu Dhabi', rows[0][24])
+        self.assertEqual('temp week 52', rows[55][0])
+        self.assertEqual('24.4', rows[55][24])
+        self.assertEqual('14.5', rows[11][8])
+
+    # this will test to see if the row conversion works. here we will convert the latitude rwo and will test 5 values
+    # as we are dealing with floating point we will use almost equals rather than a direct equality
+    def testRowToFloat(self):
+        # read in the locations file and convert the latitude column to floats
+        rows = readCSVFile('track-locations.csv')
+        convertRowToFloat(rows, 2)
+
+        # check that 5 of the values have converted correctly
+        self.assertAlmostEqual(26.0325, rows[2][1], delta=0.0001)
+        self.assertAlmostEqual(24.4672, rows[2][24], delta=0.0001)
+        self.assertAlmostEqual(40.3725, rows[2][17], delta=0.0001)
+        self.assertAlmostEqual(30.1327, rows[2][19], delta=0.0001)
+        self.assertAlmostEqual(25.49, rows[2][23], delta=0.0001)
+
+        # check that the conversion of a temperature row to floating point is also correct
+        convertRowToFloat(rows, 5)
+
+        # check that 5 of the values have converted correctly
+        self.assertAlmostEqual(20.5, rows[5][1], delta=0.0001)
+        self.assertAlmostEqual(24.5, rows[5][24], delta=0.0001)
+        self.assertAlmostEqual(7.25, rows[5][17], delta=0.0001)
+        self.assertAlmostEqual(16.75, rows[5][19], delta=0.0001)
+        self.assertAlmostEqual(22.5, rows[5][23], delta=0.0001)
+
+    # this will test to see if the file conversion overall is successful for the track locations
+    # it will read in the file and will test a string, float, and int from 2 rows to verify it worked correctly
+    def testReadTrackLocations(self):
+        # read in the locations file
+        rows = readTrackLocations()
+
+        # check the name, latitude, and final temp of the first race
+        self.assertEqual(rows[0][0], 'Bahrain')
+        self.assertAlmostEqual(rows[2][0], 26.0325, delta=0.0001)
+        self.assertAlmostEqual(rows[55][0], 20.6, delta=0.0001)
+
+        # check the name, longitude, and initial temp of the last race
+        self.assertEqual(rows[0][23], 'Abu Dhabi')
+        self.assertAlmostEqual(rows[2][23], 24.4672, delta=0.0001)
+        self.assertAlmostEqual(rows[4][23], 24, delta=0.0001)
+
+    # tests to see if the race weekends file is read in correctly
+    def testReadRaceWeekends(self):
+        # read in the race weekends file
+        weekends = readRaceWeekends()
+
+        # check that bahrain is weekend 9 and abu dhabi is weekend 49
+        self.assertEqual(weekends[0], 9)
+        self.assertEqual(weekends[23], 49)
+
+        # check that hungaroring is weekend 29
+        self.assertEqual(weekends[12], 29)
+
+    # this will test to see if the haversine function will work correctly we will test 4 sets of locations
+    def testHaversine(self):
+        # read in the locations file with conversion
+        rows = readTrackLocations()
+
+        # check the distance of Bahrain against itself this should be zero
+        self.assertAlmostEqual(haversine(rows, 0, 0), 0.0, delta=0.01)
+
+        # check the distance of Bahrain against Silverstone this should be 5158.08 km
+        self.assertAlmostEqual(haversine(rows, 0, 11), 5158.08, delta=0.01)
+
+        # check the distance of silverstone against monza this should be 1039.49 Km
+        self.assertAlmostEqual(haversine(rows, 11, 15), 1039.49, delta=0.01)
+
+        # check the distance of monza to the red bull ring this should be 455.69 Km
+        self.assertAlmostEqual(haversine(rows, 10, 15), 455.69, delta=0.01)
+
+    # will test to see if the season distance calculation is correct using the 2023 calendar
+    def testDistanceCalculation(self):
+        # read in the locations & race weekends, generate the weekends, and calculate the season distance
+        tracks = readTrackLocations()
+        weekends = readRaceWeekends()
+
+        # calculate the season distance using silverstone as the home track as this will be the case for 8 of the teams we will use monza
+        # for the other two teams.
+        self.assertAlmostEqual(calculateSeasonDistance(tracks, weekends, 11), 193645.3219, delta=0.0001)
+        self.assertAlmostEqual(calculateSeasonDistance(tracks, weekends, 15), 191408.7483, delta=0.0001)
+
+    # will test that the temperature constraint is working this should fail as azerbijan should fail the test
+    def testTempConstraint(self):
+        # load in the tracks, race weekends, and the sundays
+        tracks = readTrackLocations()
+        weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
+        weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 31, 35, 37, 38, 42, 43, 44, 40, 48, 49]
+
+        # the test with the default calender should be false because of zaandvort
+        self.assertEqual(checkTemperatureConstraint(tracks, weekends1, 20, 35), False)
+        self.assertEqual(checkTemperatureConstraint(tracks, weekends2, 20, 35), True)
+
+    # will test that we can detect four race weekends in a row.
+    def testFourRaceInRow(self):
+        # weekend patterns the first does not have four in a row the second does
+        weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
+        weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 35, 36, 37, 38, 42, 43, 44, 47, 48, 49]
+
+        # the first should pass and the second should fail
+        self.assertEqual(checkFourRaceInRow(weekends1), False)
+        self.assertEqual(checkFourRaceInRow(weekends2), True)
+
+    # will test that we can detect a period for a summer shutdown in the prescribed weeks
+    def testSummerShutdown(self):
+        # weekend patterns the first has a summer shutdown the second doesn't
+        weekends1 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 34, 35, 37, 38, 42, 43, 44, 47, 48, 49]
+        weekends2 = [9, 10, 12, 14, 16, 18, 20, 21, 23, 25, 26, 27, 29, 30, 33, 35, 37, 38, 42, 43, 44, 47, 48, 49]
+
+        # the first should pass and the second should fail
+        self.assertEqual(checkSummerShutdown(weekends1), True)
+        self.assertEqual(checkSummerShutdown(weekends2), False)
 #
 # function that will calculate the total distance for the season assuming a given racetrack as the home racetrack
 # the following will be assumed:
@@ -187,13 +183,13 @@ def checkFourRaceInRow(weekends):
 # function that will check to see if the temperature constraint for all races is satisfied. The temperature
 # constraint is that a minimum temperature of min degrees for the month is required for a race to run
 def checkTemperatureConstraint(tracks, weekends, min, max):
-    i= 0
+    j = 0
 
-    for j in range (23):
-        if tracks[weekends[i] + 4][j] < min or tracks[weekends[i] + 4][j] > max:
+    for i in range (23):
+        if tracks[weekends[j] + 4][j] < min or tracks[weekends[j] +4][i] > max:
             return False
         else:
-            i += 1
+            j += 1
     return True
 # function that will check to see if there is a four week gap anywhere in july and august. we will need this for the summer shutdown.
 # the way this is defined is that we have a gap of three weekends between successive races. this will be weeks 31, 32, and 33, they are not
@@ -295,13 +291,22 @@ def haversine(rows, location1, location2):
 
     return distance
 
-# function that will give us the index of the lowest temp below min. will return -1 if none found
+# function that will give us the index of the highest temp above max. will return -1 if none found
 def indexHighestTemp(tracks, weekends, max):
-    pass
+    for i, weekend in enumerate(weekends):
+        temp = float(tracks[weekend + 4][i + 1])
+        if temp > max:
+            return i
+    return -1
+
 
 # function that will give us the index of the lowest temp below min. will return -1 if none found
 def indexLowestTemp(tracks, weekends, min):
-    pass
+    for i, weekend in enumerate(weekends):
+        temp = float(tracks[weekend + 4][i + 1])
+        if temp < min:
+            return i
+    return -1
 
 # prints out the itinerary that was generated on a weekend by weekend basis starting from the preaseason test
 def printItinerary(tracks, weekends, home):
@@ -381,19 +386,19 @@ class CalendarAnnealer(Annealer):
         """
         Perform a prioritized move to resolve constraint violations.
         """
-        # Identify indices of races violating constraints
+        # identify indices of races violating constraints
         invalid_temp_indices = [
             i for i, weekend in enumerate(self.state)
             if self.tracks[weekend][4] < 15 or self.tracks[weekend][4] > 35
         ]
 
         if invalid_temp_indices:
-            # Swap one violating race with a valid one
+            # swap violating with a random fixed one
             idx1 = random.choice(invalid_temp_indices)
             idx2 = random.choice([i for i in range(len(self.state)) if i not in [8, 20, 48] and i != idx1])
             self.state[idx1], self.state[idx2] = self.state[idx2], self.state[idx1]
         else:
-            # Fallback: random swap
+            # random swap
             idx1, idx2 = random.sample([i for i in range(len(self.state)) if i not in [8, 20, 48]], 2)
             self.state[idx1], self.state[idx2] = self.state[idx2], self.state[idx1]
 
@@ -401,19 +406,13 @@ class CalendarAnnealer(Annealer):
         weekends = self.state
         total_distance = calculateSeasonDistance(self.tracks, weekends, self.home)
 
-        # Penalty for temperature constraints
-        temp_penalty = 0
-        for weekend in weekends:
-            temp = self.tracks[weekend][4]
-            if temp < 15:
-                temp_penalty += (15 - temp) ** 2  # Squared penalty for being too cold
-            elif temp > 35:
-                temp_penalty += (temp - 35) ** 2  # Squared penalty for being too hot
+        #penalty for tempature contstraint
+        temp_penalty = 100000 if not checkTemperatureConstraint(self.tracks, weekends, 15, 35) else 0
 
-        # Penalty for summer shutdown violation
+        # penalty for summer shutdown
         shutdown_penalty = 100000 if not checkSummerShutdown(weekends) else 0
 
-        # Penalty for four consecutive races
+        # penalty for four race in a row
         four_races_penalty = 100000 if checkFourRaceInRow(weekends) else 0
 
         return total_distance + temp_penalty + shutdown_penalty + four_races_penalty
@@ -425,14 +424,14 @@ class CalendarAnnealer(Annealer):
         fixed_indices = [8, 20, 48]
         fixed_values = [weekends[i] for i in fixed_indices]
 
-        # Extract the non-fixed elements
+        # extract the non-fixed elements
         non_fixed_indices = [i for i in range(len(weekends)) if i not in fixed_indices]
         non_fixed_values = [weekends[i] for i in non_fixed_indices]
 
-        # Shuffle the non-fixed values
+        # shuffles the non-fixed values
         random.shuffle(non_fixed_values)
 
-        # Merge back the fixed and shuffled non-fixed values
+        # merge back the fixed and shuffled non-fixed values
         shuffled_weekends = weekends[:]
         for idx, value in zip(non_fixed_indices, non_fixed_values):
             shuffled_weekends[idx] = value
@@ -441,14 +440,14 @@ class CalendarAnnealer(Annealer):
 
     def printItinerary(tracks, weekends, home):
         """
-        Prints the itinerary for the season in a readable format.
+        prints the itinerary for the season in a readable format.
         """
         print(f"--- Preseason Test at Home Track ({tracks[0][home]}) ---\n")
         total_distance = 0
 
         for i, weekend in enumerate(weekends, start=1):
-            track_name = tracks[0][weekend]  # Assuming track names are in the first row
-            expected_temp = tracks[4][weekend]  # Assuming temperature row is index 4
+            track_name = tracks[0][weekend]  # track numbers are first row
+            expected_temp = tracks[4][weekend]  # tempatures are the forth row
 
             print(f"Weekend {i}: {track_name} (Week {weekend})")
             print(f"   - Expected Temperature: {expected_temp:.1f}°C")
@@ -470,7 +469,7 @@ class CalendarAnnealer(Annealer):
 
     def validateItinerary(tracks, weekends):
         """
-        Validates the generated itinerary and prints results.
+        validator for the generated itinerary and prints results.
         """
         temp_valid = checkTemperatureConstraint(tracks, weekends, 15, 35)
         four_race_valid = not checkFourRaceInRow(weekends)
@@ -491,17 +490,17 @@ def SAcases():
     tracks = readTrackLocations()
     weekends = readRaceWeekends()
 
-    # Initial state
+    # init state
     initial_state = weekends.copy()
 
-    # Annealing for Silverstone
+    # anneal for silverstone
     print("--- Simulated Annealing: Silverstone ---")
     annealer = CalendarAnnealer(initial_state, tracks, weekends, 11)
     final_state, final_energy = annealer.anneal()
     print("Final Distance (Silverstone):", final_energy)
     printItinerary(tracks, final_state, 11)
 
-    # Annealing for Monza
+    # anneal for monza
     print("--- Simulated Annealing: Monza ---")
     annealer = CalendarAnnealer(initial_state, tracks, weekends, 15)
     final_state, final_energy = annealer.anneal()
@@ -512,16 +511,21 @@ def SAcases():
 # function that will run the genetic algorithms cases for all four situations
 def GAcases():
     """
-    Runs the Genetic Algorithm to optimize the calendar.
+    function for runnning the generatic algorithm optimizing.
+
+    creates an initial population and each with random gene, evaluates the fitness of each using the function
+
+    select from the population for reportoduction based on the fitness result.
+
     """
-    # Read tracks and weekends
+    # read
     tracks = readTrackLocations()
     weekends = readRaceWeekends()
 
     if not weekends:
         raise ValueError("Race weekends data is missing or invalid.")
 
-    # Define the fitness function
+    # defining the fitness function
     def fitness(individual):
         try:
             total_distance = calculateSeasonDistance(tracks, individual, 11)
@@ -533,7 +537,7 @@ def GAcases():
             print(f"Error evaluating fitness: {e}")
             return float('inf'),  # Assign a high penalty for invalid individuals
 
-    # Initialize population
+    # init population
     def initialize_population(size, weekends):
         population = []
         for _ in range(size):
@@ -542,17 +546,10 @@ def GAcases():
                 population.append(individual)
         return population
 
-    # Repair invalid individuals
-    def childGeneticCodeFix(individual):
-        missing = set(weekends) - set(individual)
-        duplicates = [x for x in individual if individual.count(x) > 1]
-        for i in range(len(individual)):
-            if duplicates and individual[i] in duplicates:
-                individual[i] = missing.pop()
-                duplicates.remove(individual[i])
-        return individual
+    # repair invalid individuals
 
-    # Evolve population
+
+    # evolve population
     def evolve_population(population, mutation_rate=0.1):
         parents = tools.selTournament(population, len(population), tournsize=3)
         offspring = []
@@ -564,7 +561,7 @@ def GAcases():
             offspring.extend((child1, child2))
         return [childGeneticCodeFix(child) for child in offspring]
 
-    # Initialize DEAP toolbox
+    # init ing the deap box
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox = base.Toolbox()
@@ -575,12 +572,12 @@ def GAcases():
     toolbox.register("select", tools.selTournament, tournsize=3)
     toolbox.register("evaluate", fitness)
 
-    # Initialize population
+    # init the population
     population_size = 100
     generations = 50
     population = toolbox.population(n=population_size)
 
-    # Run the GA
+    # run
     for generation in range(generations):
         fitnesses = list(map(toolbox.evaluate, population))
         for ind, fit in zip(population, fitnesses):
@@ -603,7 +600,7 @@ def GAcases():
 
         population[:] = offspring
 
-    # Final evaluation
+    # evulation
     best_individual = tools.selBest(population, 1)[0]
     print("Best Schedule Found:", best_individual)
     print("Best Distance + Penalties:", fitness(best_individual)[0])
@@ -614,7 +611,73 @@ def GAcases():
 
 # function that will run particle swarm optimisation in an attempt to find a solution
 def PSOcases():
-    pass
+
+    """
+    this function will optimize the PSO.
+    particles are initialized with random positions and each of them evaluates the objective function from its position.
+
+    eaach particle adjusts the velocity from p_best and g_best
+
+    for the velocity update equation looks like this
+
+    vi = w . vi + c1 . r1 . (pbest - xi) + c2 . r2 . (gbest - xi)
+
+    this equation is from a paper called
+    "Statistical Analysis of Velocity Update Rules in Particle Swarm Optimization"
+    by Er. Harman Preet Singh and Er. Avneet Kaur
+
+    w is for inertia weight, c1 and c2  is for cognitive and social coeeficients, and lastly
+    r1 and r2 is random values in [0,1]
+
+
+    this part was for iteration, after the iteration updating the position of a particle is required
+    for new velocity
+
+    this goes on until maximum number of iteration is reached. in this case the number is 100.
+    """
+
+
+    # read the track and weekends
+    tracks = readTrackLocations()
+    weekends = readRaceWeekends()
+
+    # define method
+    def objective_function(particles):
+        fitness_values = []
+        for particle in particles:
+            try:
+                particle = list(map(int, particle))
+                annealer = CalendarAnnealer(particle, tracks, weekends, 11)
+                fitness_values.append(annealer.energy())
+            except Exception as e:
+                print(f"Error in PSO objective function: {e}")
+                fitness_values.append(float('inf'))
+        return fitness_values
+
+    # init particle swarm optimization
+    num_particles = 100
+    dimensions = len(weekends)
+    bounds = (np.zeros(dimensions), np.ones(dimensions) * (dimensions - 1))
+
+    # this logic is from moodle + stack overflow.
+    optimizer = ps.single.GlobalBestPSO(
+        n_particles=num_particles,
+        dimensions=dimensions,
+        options={'c1': 1.5, 'c2': 1.5, 'w': 0.5},
+        bounds=bounds
+    )
+
+    # run
+    best_cost, best_position = optimizer.optimize(objective_function, iters=1000)
+
+    # decoding the best position
+    best_schedule = list(map(int, best_position))
+    childGeneticCodeFix(best_schedule)
+
+    # output to see the result
+    print("Best Schedule Found (PSO):", best_schedule)
+    print("Best Distance + Penalties (PSO):", best_cost)
+    printItinerary(tracks, best_schedule, 11)
 
 if __name__ == '__main__':
     # uncomment this run all the unit tests. when you have satisfied all the unit tests you will have a working simulation
@@ -634,4 +697,4 @@ if __name__ == '__main__':
     GAcases()
 
     # run the cases for particle swarm optimisation
-    #PSOcases()
+    PSOcases()
